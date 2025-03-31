@@ -9,25 +9,42 @@ interface Message {
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
-  const [sender, setSender] = useState('Emine');
+  const [sender, setSender] = useState('Kullanıcı');
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const fetchMessages = async () => {
-    const res = await fetch('/api/get-messages');
-    const data = await res.json();
-    setMessages(data);
+    // Eğer Bubble'dan asistan yanıtı çekilecekse burada API çağrısı yapılabilir.
+    // Şimdilik sadece scroll işlemi için referans.
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const sendMessage = async () => {
     if (text.trim() === '') return;
-    await fetch('/api/send-message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender, message: text })
-    });
+
+    const payload = {
+      assistant_id: 'asst_abc123',
+      thread_id: 'thread_xyz789',
+      company: 'Tesla',
+      message_text: text
+    };
+
+    // Önce kullanıcı mesajını göster
+    setMessages(prev => [...prev, {
+      sender: sender,
+      message: text,
+      timestamp: Date.now()
+    }]);
     setText('');
-    fetchMessages();
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+
+    // n8n webhook'una mesaj gönder
+    await fetch('https://unitplan.app.n8n.cloud/webhook-test/afda107d-d0e9-45ae-8c00-cacde0d20a50', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
   };
 
   useEffect(() => {
