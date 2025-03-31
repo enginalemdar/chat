@@ -90,22 +90,37 @@ export default function Home() {
       ])
     );
 
-    const res = await fetch(`https://app.unitplan.co/version-test/api/1.1/obj/PitchBot_Message?constraints=${encoded}&sort_field=Created Date&descending=yes&limit=10`);
-    const data = await res.json();
-    const latest = data.response.results[0];
+    const [shownAssistantMessageIds, setShownAssistantMessageIds] = useState<string[]>([]);
 
-    if (latest && latest.message) {
-      const alreadyExists = messages.some(msg => msg.message === latest.message && msg.sender === "Asistan");
-      if (!alreadyExists) {
-        setMessages(prev => [...prev, {
-          sender: "Asistan",
-          message: latest.message,
-          timestamp: Date.now()
-        }]);
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }
+const fetchLatestAssistantMessage = async () => {
+  if (!companyId) return;
+
+  const encoded = encodeURIComponent(
+    JSON.stringify([
+      { key: 'company', constraint_type: 'equals', value: companyId },
+      { key: 'sender', constraint_type: 'equals', value: 'PitchBot' }
+    ])
+  );
+
+  const res = await fetch(`https://app.unitplan.co/version-test/api/1.1/obj/PitchBot_Message?constraints=${encoded}&sort_field=Created Date&descending=yes&limit=3`);
+  const data = await res.json();
+  const latest = data.response.results[0];
+
+  if (latest && latest.message) {
+    const messageId = latest._id || latest.id;
+
+    if (!shownAssistantMessageIds.includes(messageId)) {
+      setMessages(prev => [...prev, {
+        sender: "Asistan",
+        message: latest.message,
+        timestamp: Date.now()
+      }]);
+      setShownAssistantMessageIds(prev => [...prev, messageId]);
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  };
+  }
+};
+
 
   // Sayfa yüklendiğinde URL'den company_id al ve assistant bilgilerini çek
   useEffect(() => {
