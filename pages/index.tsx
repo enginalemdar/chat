@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 
 interface Message {
   sender: string;
@@ -10,25 +11,40 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [sender, setSender] = useState('Kullanıcı');
+  const [assistantId, setAssistantId] = useState('');
+  const [threadId, setThreadId] = useState('');
+  const [company, setCompany] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
-  const fetchMessages = async () => {
-    // Eğer Bubble'dan asistan yanıtı çekilecekse burada API çağrısı yapılabilir.
-    // Şimdilik sadece scroll işlemi için referans.
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const fetchContextInfo = async (companyId: string) => {
+    const encodedConstraint = encodeURIComponent(
+      JSON.stringify([{ key: "company", constraint_type: "equals", value: companyId }])
+    );
+
+    const res = await fetch(
+      `https://app.unitplan.co/version-test/api/1.1/obj/PitchBot?constraints=${encodedConstraint}`
+    );
+
+    const data = await res.json();
+    const first = data.response.results[0];
+    if (first) {
+      setAssistantId(first.assistant_id);
+      setThreadId(first.thread_id);
+      setCompany(first.company);
+    }
   };
 
   const sendMessage = async () => {
-    if (text.trim() === '') return;
+    if (text.trim() === '' || !assistantId || !threadId || !company) return;
 
     const payload = {
-      assistant: 'asst_abc123',
-      thread_id: 'thread_xyz789',
-      company: 'Tesla',
-      message: text
+      assistant_id: assistantId,
+      thread_id: threadId,
+      company: company,
+      message_text: text
     };
 
-    // Önce kullanıcı mesajını göster
     setMessages(prev => [...prev, {
       sender: sender,
       message: text,
@@ -37,7 +53,6 @@ export default function Home() {
     setText('');
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-    // n8n webhook'una mesaj gönder
     await fetch('https://unitplan.app.n8n.cloud/webhook-test/afda107d-d0e9-45ae-8c00-cacde0d20a50', {
       method: 'POST',
       headers: {
@@ -48,10 +63,11 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    const companyId = router.query.company_id as string;
+    if (companyId) {
+      fetchContextInfo(companyId);
+    }
+  }, [router.query.company_id]);
 
   return (
     <div className="max-w-xl mx-auto p-4">
