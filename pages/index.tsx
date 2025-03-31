@@ -34,32 +34,46 @@ export default function Home() {
 
   // Mesaj gönderme
   const sendMessage = async () => {
-    if (!text.trim() || !assistantId || !companyId) return;
+  console.log("🔹 sendMessage çalıştı"); // TEST 1
 
-    // Kullanıcı mesajını ekle
-    setMessages(prev => [...prev, {
-      sender: sender,
+  if (!text.trim()) {
+    console.log("⚠️ Boş mesaj"); // TEST 2
+    return;
+  }
+  if (!assistantId) {
+    console.log("⚠️ assistantId boş"); // TEST 3
+    return;
+  }
+  if (!companyId) {
+    console.log("⚠️ companyId boş"); // TEST 4
+    return;
+  }
+
+  console.log("✅ Tüm veriler tamam, gönderiliyor..."); // TEST 5
+
+  setMessages(prev => [...prev, {
+    sender: sender,
+    message: text,
+    timestamp: Date.now()
+  }]);
+
+  setText('');
+  bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+
+  await fetch('https://unitplan.app.n8n.cloud/webhook-test/afda107d-d0e9-45ae-8c00-cacde0d20a50', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      company: companyId,
       message: text,
-      timestamp: Date.now()
-    }]);
+      assistant: assistantId
+    })
+  });
 
-    setText('');
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-
-    // n8n'e POST isteği gönder
-    await fetch('https://unitplan.app.n8n.cloud/webhook-test/afda107d-d0e9-45ae-8c00-cacde0d20a50', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        company: companyId,
-        message: text,
-        assistant: assistantId
-      })
-    });
-  };
-
+  console.log("✅ fetch tamamlandı"); // TEST 6
+};
   // Sayfa yüklendiğinde URL'deki ?company_id=... parametresini al
   useEffect(() => {
     const companyId = router.query.company_id as string;
