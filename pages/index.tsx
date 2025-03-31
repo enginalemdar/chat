@@ -31,7 +31,7 @@ export default function Home() {
 
     if (record) {
       setAssistantId(record.assistant_id);
-      setCompanyId(record.company);
+      setCompanyId(record.company_id);
     }
   };
 
