@@ -16,8 +16,9 @@ export default function Home() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Bubble API'den PitchBot thing'ini company_id'ye göre çek
   const fetchContextInfo = async (companyId: string) => {
+    console.log('📡 PitchBot çekiliyor...');
+
     const encodedConstraints = encodeURIComponent(
       JSON.stringify([{ key: 'company', constraint_type: 'equals', value: companyId }])
     );
@@ -26,65 +27,65 @@ export default function Home() {
     const data = await res.json();
     const record = data.response.results[0];
 
+    console.log('🎯 Gelen veri:', record);
+
     if (record) {
       setAssistantId(record.assistant_id);
       setCompanyId(record.company);
     }
   };
 
-  // Mesaj gönderme
   const sendMessage = async () => {
-  console.log("🔹 sendMessage çalıştı"); // TEST 1
+    console.log('🟢 sendMessage çalıştı');
 
-  if (!text.trim()) {
-    console.log("⚠️ Boş mesaj"); // TEST 2
-    return;
-  }
-  if (!assistantId) {
-    console.log("⚠️ assistantId boş"); // TEST 3
-    return;
-  }
-  if (!companyId) {
-    console.log("⚠️ companyId boş"); // TEST 4
-    return;
-  }
+    if (!text.trim()) {
+      console.warn('⚠️ Boş mesaj');
+      return;
+    }
+    if (!assistantId) {
+      console.warn('⚠️ assistantId boş');
+      return;
+    }
+    if (!companyId) {
+      console.warn('⚠️ companyId boş');
+      return;
+    }
 
-  console.log("✅ Tüm veriler tamam, gönderiliyor..."); // TEST 5
+    console.log('✅ Tüm veriler tamam, mesaj gönderiliyor...');
 
-  setMessages(prev => [...prev, {
-    sender: sender,
-    message: text,
-    timestamp: Date.now()
-  }]);
-
-  setText('');
-  bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-
-  await fetch('https://unitplan.app.n8n.cloud/webhook-test/afda107d-d0e9-45ae-8c00-cacde0d20a50', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      company: companyId,
+    setMessages(prev => [...prev, {
+      sender: sender,
       message: text,
-      assistant: assistantId
-    })
-  });
+      timestamp: Date.now()
+    }]);
+    setText('');
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-  console.log("✅ fetch tamamlandı"); // TEST 6
-};
-  // Sayfa yüklendiğinde URL'deki ?company_id=... parametresini al
- useEffect(() => {
-  if (!router.isReady) return;
+    await fetch('https://unitplan.app.n8n.cloud/webhook-test/afda107d-d0e9-45ae-8c00-cacde0d20a50', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        company: companyId,
+        message: text,
+        assistant: assistantId
+      })
+    });
 
-  const companyId = router.query.company_id as string;
-  console.log('🔍 router ready, gelen company_id:', companyId);
+    console.log('✅ fetch tamamlandı');
+  };
 
-  if (companyId) {
-    fetchContextInfo(companyId);
-  }
-}, [router.isReady]);
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const companyId = router.query.company_id as string;
+    console.log('🔍 router ready, gelen company_id:', companyId);
+
+    if (companyId) {
+      fetchContextInfo(companyId);
+    }
+  }, [router.isReady]);
 
   return (
     <div className="max-w-xl mx-auto p-4">
