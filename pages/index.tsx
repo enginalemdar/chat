@@ -22,10 +22,10 @@ export default function Home() {
     if (text.trim() === '') return;
 
     const payload = {
-      assistant_id: 'asst_abc123',
+      assistant: 'asst_abc123',
       thread_id: 'thread_xyz789',
       company: 'Tesla',
-      message_text: text
+      message: text
     };
 
     // Önce kullanıcı mesajını göster
