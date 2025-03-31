@@ -29,8 +29,8 @@ export default function Home() {
     const data = await res.json();
     const first = data.response.results[0];
     if (first) {
-      setAssistantId(first.assistant_id);
-      setThreadId(first.thread_id);
+      setAssistantId(first.assistant);
+      setThreadId(first.thread);
       setCompany(first.company);
     }
   };
@@ -39,10 +39,10 @@ export default function Home() {
     if (text.trim() === '' || !assistantId || !threadId || !company) return;
 
     const payload = {
-      assistant_id: assistantId,
+      assistant: assistantId,
       thread_id: threadId,
       company: company,
-      message_text: text
+      message: text
     };
 
     setMessages(prev => [...prev, {
