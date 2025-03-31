@@ -90,7 +90,7 @@ export default function Home() {
       ])
     );
 
-    const res = await fetch(`https://app.unitplan.co/version-test/api/1.1/obj/pitchbot_messages?constraints=${encoded}&sort_field=Created Date&descending=yes&limit=1`);
+    const res = await fetch(`https://app.unitplan.co/version-test/api/1.1/obj/PitchBot_Message?constraints=${encoded}&sort_field=Created Date&descending=yes&limit=1`);
     const data = await res.json();
     const latest = data.response.results[0];
 
