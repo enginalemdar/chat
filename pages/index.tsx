@@ -75,12 +75,16 @@ export default function Home() {
   console.log("✅ fetch tamamlandı"); // TEST 6
 };
   // Sayfa yüklendiğinde URL'deki ?company_id=... parametresini al
-  useEffect(() => {
-    const companyId = router.query.company_id as string;
-    if (companyId) {
-      fetchContextInfo(companyId);
-    }
-  }, [router.query.company_id]);
+ useEffect(() => {
+  if (!router.isReady) return;
+
+  const companyId = router.query.company_id as string;
+  console.log('🔍 router ready, gelen company_id:', companyId);
+
+  if (companyId) {
+    fetchContextInfo(companyId);
+  }
+}, [router.isReady]);
 
   return (
     <div className="max-w-xl mx-auto p-4">
