@@ -10,17 +10,18 @@ interface Message {
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
-  const [sender, setSender] = useState('Kullanıcı');
+  const [sender] = useState('Kullanıcı');
   const [assistantId, setAssistantId] = useState('');
   const [companyId, setCompanyId] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // PitchBot tablosundan assistant bilgilerini çek
   const fetchContextInfo = async (companyId: string) => {
     console.log('📡 PitchBot çekiliyor...');
 
     const encodedConstraints = encodeURIComponent(
-      JSON.stringify([{ key: 'company_id', constraint_type: 'equals', value: companyId }])
+      JSON.stringify([{ key: 'company', constraint_type: 'equals', value: companyId }])
     );
 
     const res = await fetch(`https://app.unitplan.co/version-test/api/1.1/obj/PitchBot?constraints=${encodedConstraints}`);
@@ -31,10 +32,11 @@ export default function Home() {
 
     if (record) {
       setAssistantId(record.assistant_id);
-      setCompanyId(record.company_id);
+      setCompanyId(record.company_id); // ← DÜZELTİLDİ
     }
   };
 
+  // Kullanıcı mesajını gönder
   const sendMessage = async () => {
     console.log('🟢 sendMessage çalıştı');
 
@@ -58,6 +60,7 @@ export default function Home() {
       message: text,
       timestamp: Date.now()
     }]);
+
     setText('');
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
 
@@ -76,6 +79,35 @@ export default function Home() {
     console.log('✅ fetch tamamlandı');
   };
 
+  // pitchbot_messages tablosundan asistan cevabını çek
+  const fetchLatestAssistantMessage = async () => {
+    if (!companyId) return;
+
+    const encoded = encodeURIComponent(
+      JSON.stringify([
+        { key: 'company', constraint_type: 'equals', value: companyId },
+        { key: 'sender', constraint_type: 'equals', value: 'PitchBot' }
+      ])
+    );
+
+    const res = await fetch(`https://app.unitplan.co/version-test/api/1.1/obj/pitchbot_messages?constraints=${encoded}&sort_field=Created Date&descending=yes&limit=1`);
+    const data = await res.json();
+    const latest = data.response.results[0];
+
+    if (latest && latest.message) {
+      const alreadyExists = messages.some(msg => msg.message === latest.message && msg.sender === "Asistan");
+      if (!alreadyExists) {
+        setMessages(prev => [...prev, {
+          sender: "Asistan",
+          message: latest.message,
+          timestamp: Date.now()
+        }]);
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
+  // Sayfa yüklendiğinde URL'den company_id al ve assistant bilgilerini çek
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -86,6 +118,17 @@ export default function Home() {
       fetchContextInfo(companyId);
     }
   }, [router.isReady]);
+
+  // 4 saniyede bir asistan cevabı kontrolü
+  useEffect(() => {
+    if (!companyId) return;
+
+    const interval = setInterval(() => {
+      fetchLatestAssistantMessage();
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [companyId, messages]);
 
   return (
     <div className="max-w-xl mx-auto p-4">
