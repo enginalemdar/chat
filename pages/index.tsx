@@ -13,13 +13,12 @@ export default function Home() {
   const [sender] = useState('Kullanıcı');
   const [assistantId, setAssistantId] = useState('');
   const [companyId, setCompanyId] = useState('');
+  const [shownAssistantMessageIds, setShownAssistantMessageIds] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   // PitchBot tablosundan assistant bilgilerini çek
   const fetchContextInfo = async (companyId: string) => {
-    console.log('📡 PitchBot çekiliyor...');
-
     const encodedConstraints = encodeURIComponent(
       JSON.stringify([{ key: 'company_id', constraint_type: 'equals', value: companyId }])
     );
@@ -28,32 +27,15 @@ export default function Home() {
     const data = await res.json();
     const record = data.response.results[0];
 
-    console.log('🎯 Gelen veri:', record);
-
     if (record) {
       setAssistantId(record.assistant_id);
-      setCompanyId(record.company_id); // ← DÜZELTİLDİ
+      setCompanyId(record.company_id);
     }
   };
 
   // Kullanıcı mesajını gönder
   const sendMessage = async () => {
-    console.log('🟢 sendMessage çalıştı');
-
-    if (!text.trim()) {
-      console.warn('⚠️ Boş mesaj');
-      return;
-    }
-    if (!assistantId) {
-      console.warn('⚠️ assistantId boş');
-      return;
-    }
-    if (!companyId) {
-      console.warn('⚠️ companyId boş');
-      return;
-    }
-
-    console.log('✅ Tüm veriler tamam, mesaj gönderiliyor...');
+    if (!text.trim() || !assistantId || !companyId) return;
 
     setMessages(prev => [...prev, {
       sender: sender,
@@ -75,11 +57,9 @@ export default function Home() {
         assistant: assistantId
       })
     });
-
-    console.log('✅ fetch tamamlandı');
   };
 
-  // pitchbot_messages tablosundan asistan cevabını çek
+  // pitchbot_message tablosundan asistan cevabını çek
   const fetchLatestAssistantMessage = async () => {
     if (!companyId) return;
 
@@ -90,60 +70,39 @@ export default function Home() {
       ])
     );
 
-    const [shownAssistantMessageIds, setShownAssistantMessageIds] = useState<string[]>([]);
+    const res = await fetch(`https://app.unitplan.co/version-test/api/1.1/obj/PitchBot_Message?constraints=${encoded}&sort_field=Created Date&descending=yes&limit=3`);
+    const data = await res.json();
+    const results = data.response.results;
 
-const fetchLatestAssistantMessage = async () => {
-  if (!companyId) return;
-
-  const encoded = encodeURIComponent(
-    JSON.stringify([
-      { key: 'company', constraint_type: 'equals', value: companyId },
-      { key: 'sender', constraint_type: 'equals', value: 'PitchBot' }
-    ])
-  );
-
-  const res = await fetch(`https://app.unitplan.co/version-test/api/1.1/obj/PitchBot_Message?constraints=${encoded}&sort_field=Created Date&descending=yes&limit=3`);
-  const data = await res.json();
-  const latest = data.response.results[0];
-
-  if (latest && latest.message) {
-    const messageId = latest._id || latest.id;
-
-    if (!shownAssistantMessageIds.includes(messageId)) {
-      setMessages(prev => [...prev, {
-        sender: "Asistan",
-        message: latest.message,
-        timestamp: Date.now()
-      }]);
-      setShownAssistantMessageIds(prev => [...prev, messageId]);
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    for (const msg of results) {
+      const messageId = msg._id || msg.id;
+      if (!shownAssistantMessageIds.includes(messageId) && msg.message) {
+        setMessages(prev => [...prev, {
+          sender: "Asistan",
+          message: msg.message,
+          timestamp: Date.now()
+        }]);
+        setShownAssistantMessageIds(prev => [...prev, messageId]);
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
     }
-  }
-};
+  };
 
-
-  // Sayfa yüklendiğinde URL'den company_id al ve assistant bilgilerini çek
+  // Sayfa yüklendiğinde company_id ile asistan bilgisi çek
   useEffect(() => {
     if (!router.isReady) return;
-
     const companyId = router.query.company_id as string;
-    console.log('🔍 router ready, gelen company_id:', companyId);
-
-    if (companyId) {
-      fetchContextInfo(companyId);
-    }
+    if (companyId) fetchContextInfo(companyId);
   }, [router.isReady]);
 
   // 4 saniyede bir asistan cevabı kontrolü
   useEffect(() => {
     if (!companyId) return;
-
     const interval = setInterval(() => {
       fetchLatestAssistantMessage();
     }, 4000);
-
     return () => clearInterval(interval);
-  }, [companyId, messages]);
+  }, [companyId, shownAssistantMessageIds]);
 
   return (
     <div className="max-w-xl mx-auto p-4">
