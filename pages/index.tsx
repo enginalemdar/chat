@@ -12,56 +12,55 @@ export default function Home() {
   const [text, setText] = useState('');
   const [sender, setSender] = useState('Kullanıcı');
   const [assistantId, setAssistantId] = useState('');
-  const [threadId, setThreadId] = useState('');
-  const [company, setCompany] = useState('');
+  const [companyId, setCompanyId] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // Bubble API'den PitchBot thing'ini company_id'ye göre çek
   const fetchContextInfo = async (companyId: string) => {
-    const encodedConstraint = encodeURIComponent(
-      JSON.stringify([{ key: "company", constraint_type: "equals", value: companyId }])
+    const encodedConstraints = encodeURIComponent(
+      JSON.stringify([{ key: 'company', constraint_type: 'equals', value: companyId }])
     );
 
-    const res = await fetch(
-      `https://app.unitplan.co/version-test/api/1.1/obj/PitchBot?constraints=${encodedConstraint}`
-    );
-
+    const res = await fetch(`https://app.unitplan.co/version-test/api/1.1/obj/PitchBot?constraints=${encodedConstraints}`);
     const data = await res.json();
-    const first = data.response.results[0];
-    if (first) {
-      setAssistantId(first.assistant);
-      setThreadId(first.thread);
-      setCompany(first.company);
+    const record = data.response.results[0];
+
+    if (record) {
+      setAssistantId(record.assistant_id);
+      setCompanyId(record.company);
     }
   };
 
+  // Mesaj gönderme
   const sendMessage = async () => {
-    if (text.trim() === '' || !assistantId || !threadId || !company) return;
+    if (!text.trim() || !assistantId || !companyId) return;
 
-    const payload = {
-      assistant: assistantId,
-      thread_id: threadId,
-      company: company,
-      message: text
-    };
-
+    // Kullanıcı mesajını ekle
     setMessages(prev => [...prev, {
       sender: sender,
       message: text,
       timestamp: Date.now()
     }]);
+
     setText('');
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
 
+    // n8n'e POST isteği gönder
     await fetch('https://unitplan.app.n8n.cloud/webhook-test/afda107d-d0e9-45ae-8c00-cacde0d20a50', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        company: companyId,
+        message: text,
+        assistant: assistantId
+      })
     });
   };
 
+  // Sayfa yüklendiğinde URL'deki ?company_id=... parametresini al
   useEffect(() => {
     const companyId = router.query.company_id as string;
     if (companyId) {
