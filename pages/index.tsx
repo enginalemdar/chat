@@ -20,7 +20,7 @@ export default function Home() {
     console.log('📡 PitchBot çekiliyor...');
 
     const encodedConstraints = encodeURIComponent(
-      JSON.stringify([{ key: 'company', constraint_type: 'equals', value: companyId }])
+      JSON.stringify([{ key: 'company_id', constraint_type: 'equals', value: companyId }])
     );
 
     const res = await fetch(`https://app.unitplan.co/version-test/api/1.1/obj/PitchBot?constraints=${encodedConstraints}`);
